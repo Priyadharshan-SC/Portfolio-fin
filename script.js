@@ -5,16 +5,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const mobileMenu = document.getElementById('mobile-menu');
 
     // Mobile menu toggle
-    mobileMenuButton.addEventListener('click', () => {
-        mobileMenu.classList.toggle('hidden');
-    });
-
-    // Close mobile menu when a link is clicked
-    document.querySelectorAll('#mobile-menu a').forEach(link => {
-        link.addEventListener('click', () => {
-            mobileMenu.classList.add('hidden');
+    if (mobileMenuButton && mobileMenu) {
+        mobileMenuButton.addEventListener('click', () => {
+            mobileMenu.classList.toggle('hidden');
         });
-    });
+
+        // Close mobile menu when a link is clicked
+        document.querySelectorAll('#mobile-menu a').forEach(link => {
+            link.addEventListener('click', () => {
+                mobileMenu.classList.add('hidden');
+            });
+        });
+    }
 
     // Scroll animations for sections
     const sections = document.querySelectorAll('.section');
@@ -25,7 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }, {
-        threshold: 0.1
+        threshold: 0.08
     });
     sections.forEach(section => {
         observer.observe(section);
@@ -55,9 +57,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const onScroll = () => {
         let currentSection = '';
+        const offset = header ? header.offsetHeight + 20 : 120;
         sectionsForNav.forEach(section => {
             const sectionTop = section.offsetTop;
-            if (window.scrollY >= sectionTop - (header.offsetHeight || 120)) {
+            if (window.scrollY >= sectionTop - offset) {
                 currentSection = section.getAttribute('id');
             }
         });
@@ -66,56 +69,66 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    window.addEventListener('scroll', onScroll);
+    window.addEventListener('scroll', onScroll, { passive: true });
     window.addEventListener('load', onScroll);
+
+    // Dynamic current year in footer if element exists
+    const yearSpan = document.getElementById('current-year');
+    if (yearSpan) {
+        yearSpan.textContent = new Date().getFullYear();
+    }
 });
 
 
-// --- Google Sheet Form Submission & Validation ---
-const scriptURL = 'https://script.google.com/macros/s/AKfycbyDPbYJHs5nwXCg4wTE5GwoUmst2IpqVmzkmLgcY-dD154YzYgklkmD-yzS_GAVv8FG9g/exec'; // IMPORTANT: Replace with your script URL
+// --- Contact Form Handling & Validation ---
 const form = document.getElementById('contact-form');
 const submitButton = document.getElementById('submit-button');
 const successMessage = document.getElementById('form-success-message');
+const infoMessage = document.getElementById('form-info-message');
 
 const nameInput = document.getElementById('name');
 const emailInput = document.getElementById('email');
 const phoneInput = document.getElementById('phone');
 const messageInput = document.getElementById('message');
 
-// --- Validation Functions ---
+// Validation Functions
 const setError = (input, message) => {
     const errorDiv = input.nextElementSibling;
-    errorDiv.innerText = message;
-    errorDiv.style.display = 'block';
+    if (errorDiv && errorDiv.classList.contains('error-message')) {
+        errorDiv.innerText = message;
+        errorDiv.style.display = 'block';
+    }
     input.classList.add('border-red-500', 'focus:ring-red-500');
     input.classList.remove('focus:ring-amber-500');
 };
 
 const setSuccess = (input) => {
     const errorDiv = input.nextElementSibling;
-    errorDiv.innerText = '';
-    errorDiv.style.display = 'none';
+    if (errorDiv && errorDiv.classList.contains('error-message')) {
+        errorDiv.innerText = '';
+        errorDiv.style.display = 'none';
+    }
     input.classList.remove('border-red-500', 'focus:ring-red-500');
     input.classList.add('focus:ring-amber-500');
 };
 
-const isValidEmail = email => {
+const isValidEmail = (email) => {
     const re = /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
     return re.test(String(email).toLowerCase());
 };
 
-const isValidPhone = phone => {
-    // Validates a 10-digit Indian mobile number, optionally with +91
-    const re = /^(?:\+91)?[6-9]\d{9}$/;
-    return re.test(String(phone));
-}
+const isValidPhone = (phone) => {
+    // Validates a 10-digit Indian mobile number, optionally with +91 or country prefix
+    const re = /^(?:\+?\d{1,3}[- ]?)?[6-9]\d{9}$/;
+    return re.test(String(phone).replace(/\s+/g, ''));
+};
 
 const validateInputs = () => {
     let isValid = true;
-    const nameValue = nameInput.value.trim();
-    const emailValue = emailInput.value.trim();
-    const phoneValue = phoneInput.value.trim();
-    const messageValue = messageInput.value.trim();
+    const nameValue = nameInput ? nameInput.value.trim() : '';
+    const emailValue = emailInput ? emailInput.value.trim() : '';
+    const phoneValue = phoneInput ? phoneInput.value.trim() : '';
+    const messageValue = messageInput ? messageInput.value.trim() : '';
 
     if (nameValue === '') {
         setError(nameInput, 'Name is required');
@@ -128,19 +141,17 @@ const validateInputs = () => {
         setError(emailInput, 'Email is required');
         isValid = false;
     } else if (!isValidEmail(emailValue)) {
-        setError(emailInput, 'Provide a valid email address');
+        setError(emailInput, 'Please provide a valid email address');
         isValid = false;
     } else {
         setSuccess(emailInput);
     }
 
-    if (phoneValue === '') {
-        setError(phoneInput, 'Phone number is required');
+    // Phone is optional; only validate format if provided
+    if (phoneValue !== '' && !isValidPhone(phoneValue)) {
+        setError(phoneInput, 'Please provide a valid phone number (e.g., +91 98948 10613)');
         isValid = false;
-    } else if (!isValidPhone(phoneValue)) {
-        setError(phoneInput, 'Provide a valid 10-digit phone number');
-        isValid = false;
-    } else {
+    } else if (phoneInput) {
         setSuccess(phoneInput);
     }
 
@@ -154,44 +165,36 @@ const validateInputs = () => {
     return isValid;
 };
 
+// Form Submission Logic
+if (form) {
+    form.addEventListener('submit', (e) => {
+        e.preventDefault();
 
-// --- Form Submission Logic ---
-form.addEventListener('submit', e => {
-    e.preventDefault();
+        if (validateInputs()) {
+            const name = nameInput.value.trim();
+            const email = emailInput.value.trim();
+            const phone = phoneInput ? phoneInput.value.trim() : '';
+            const message = messageInput.value.trim();
 
-    if (validateInputs()) {
-        // Show loading state
-        submitButton.querySelector('.button-text').style.display = 'none';
-        submitButton.querySelector('.button-icon').style.display = 'none';
-        submitButton.querySelector('.loader').style.display = 'block';
-        submitButton.disabled = true;
+            // Construct mailto link as reliable direct transmission method
+            const subject = encodeURIComponent(`Portfolio Inquiry from ${name}`);
+            const bodyContent = `Name: ${name}\nEmail: ${email}\nPhone: ${phone ? phone : 'Not provided'}\n\nMessage:\n${message}`;
+            const mailtoUrl = `mailto:priyadharshansanthanams@gmail.com?subject=${subject}&body=${encodeURIComponent(bodyContent)}`;
 
-        fetch(scriptURL, { method: 'POST', body: new FormData(form)})
-            .then(response => {
-                // Hide loading state
-                submitButton.querySelector('.button-text').style.display = 'block';
-                submitButton.querySelector('.button-icon').style.display = 'block';
-                submitButton.querySelector('.loader').style.display = 'none';
-                submitButton.disabled = false;
+            if (infoMessage) {
+                infoMessage.style.display = 'block';
+                infoMessage.innerText = 'Opening your email client to send this message directly...';
+            }
 
-                // Show success message and reset form
-                successMessage.style.display = 'block';
-                form.reset();
-                setTimeout(() => {
-                    successMessage.style.display = 'none';
-                }, 5000); // Hide after 5 seconds
-            })
-            .catch(error => {
-                console.error('Error!', error.message);
-                 // Hide loading state
-                submitButton.querySelector('.button-text').style.display = 'block';
-                submitButton.querySelector('.button-icon').style.display = 'block';
-                submitButton.querySelector('.loader').style.display = 'none';
-                submitButton.disabled = false;
+            // Launch default email client
+            window.location.href = mailtoUrl;
 
-                // You could show an error message to the user here
-                alert('An error occurred. Please try again.');
-            });
-    }
-});
-
+            // Optional reset after delay
+            setTimeout(() => {
+                if (infoMessage) {
+                    infoMessage.style.display = 'none';
+                }
+            }, 6000);
+        }
+    });
+}

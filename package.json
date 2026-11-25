@@ -1,0 +1,28 @@
+{
+  "name": "priyadharshan-portfolio-mern",
+  "version": "2.0.0",
+  "description": "Full-Stack MERN Portfolio of Priyadharshan S (MongoDB, Express, React, Node.js)",
+  "main": "server/server.js",
+  "scripts": {
+    "start": "node server/server.js",
+    "server": "node server/server.js",
+    "client": "npm run dev --prefix client",
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "build": "npm run build --prefix client",
+    "install:all": "npm install && npm install --prefix server && npm install --prefix client"
+  },
+  "keywords": [
+    "mern",
+    "portfolio",
+    "react",
+    "express",
+    "mongodb",
+    "node"
+  ],
+  "author": "Priyadharshan S",
+  "license": "ISC",
+  "dependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
+
